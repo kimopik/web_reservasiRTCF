@@ -1,15 +1,15 @@
 <?php
 $host = "localhost";
-$user = "root";
-// Baris '<<<<<<< HEAD' yang error sudah dihapus dari sini
-$pass = "rpl12345";
-$db = "finedining_db";
+$user = "root"; // Sesuaikan
+$pass = "rpl12345";     // Sesuaikan
+$db_name = "finedining_db"; // Sesuaikan
 
-$conn = mysqli_connect($host, $user, $pass, $db);
+// Pastikan variabel koneksi bernama $koneksi
+$koneksi = new mysqli($host, $user, $pass, $db_name); 
 
-if (!$conn) {
-    die("Koneksi database gagal: " . mysqli_connect_error());
+// Handle error jika koneksi gagal
+if ($koneksi->connect_error) {
+    die("Koneksi gagal: " . $koneksi->connect_error);
 }
-
-echo "Koneksi berhasil!";
+// Tidak perlu ada 'echo "Koneksi berhasil!";' di sini
 ?>

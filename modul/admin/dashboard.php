@@ -1,14 +1,15 @@
 <?php
 session_start();
 
-// 1. KEAMANAN: Periksa apakah admin sudah login
-if (!isset($_SESSION['admin_id']) && !isset($_SESSION['admin_username'])) {
-    // Jika belum login, tendang ke halaman login
-    // Sesuaikan path ini dengan lokasi file login admin Anda
-    header("Location: ../../login-admin.php"); 
-    exit;
+// Cek apakah variabel sesi 'admin' sudah diset. 
+// Sesuaikan dengan nama variabel sesi yang Anda buat di login-admin.php
+if (!isset($_SESSION['admin_username'])) { 
+    // Jika belum login, redirect kembali ke halaman login
+    header("Location: login-admin.php"); 
+    exit();
 }
 
+// Jika sudah login, lanjutkan dengan konten dashboard
 // 2. KONEKSI: Sertakan file koneksi database
 // (Naik 2 level, lalu masuk ke folder 'lib')
 require_once '../../lib/koneksi.php';
