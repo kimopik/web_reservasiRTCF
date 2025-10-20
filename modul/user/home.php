@@ -1,7 +1,7 @@
 <?php include '../../template/header.php'; ?>
 
 
-<?php include '../template/footer.php'; ?>
+<?php include '../../template/footer.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
