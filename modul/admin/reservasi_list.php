@@ -1,75 +1,53 @@
 <?php
-include '../../lib/koneksi.php';
-include '../../template/header.php';
-include '../../template/navbar.php';
+// File: modul/admin/reservasi list.php
+session_start();
 
-// Query gabungan antar tabel
-$query = "
-    SELECT 
-        r.id_reservasi,
-        u.nama AS nama_user,
-        m.nomor_meja,
-        m.kapasitas,
-        r.tanggal_reservasi,
-        r.waktu_reservasi,
-        r.jumlah_orang,
-        r.status,
-        r.catatan
-    FROM reservasi r
-    JOIN user u ON r.id_user = u.id_user
-    JOIN meja m ON r.id_meja = m.id_meja
-    ORDER BY r.tanggal_reservasi DESC, r.waktu_reservasi ASC
-";
-$result = mysqli_query($conn, $query);
+// Cek otentikasi admin
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header("Location: login-admin.php");
+    exit();
+}
+
+// Include koneksi DB
+include_once '../../lib/koneksi.php'; 
+
+// Pastikan parameter ID dan action tersedia
+if (isset($_GET['id']) && isset($_GET['action'])) {
+    $reservasi_id = intval($_GET['id']);
+    $action = strtolower($_GET['action']);
+    $new_status = '';
+    
+    // Tentukan status baru berdasarkan list
+    if ($action == 'confirm') {
+        $new_status = 'confirmed';
+    } elseif ($action == 'cancel') {
+        $new_status = 'cancelled';
+    } else {
+        // Jika list tidak valid, kembali ke dashboard
+        header("Location: dashboard.php");
+        exit();
+    }
+
+    // Query untuk update status
+    $stmt = $conn->prepare("UPDATE reservations SET status = ? WHERE id = ?");
+    $stmt->bind_param("si", $new_status, $reservasi_id);
+    
+    if ($stmt->execute()) {
+        // Berhasil update
+        $_SESSION['status_msg'] = "Reservasi ID {$reservasi_id} berhasil diubah statusnya menjadi " . ucfirst($new_status) . ".";
+        $_SESSION['status_type'] = "success";
+    } else {
+        // Gagal update
+        $_SESSION['status_msg'] = "Gagal mengubah status reservasi: " . $conn->error;
+        $_SESSION['status_type'] = "danger";
+    }
+    
+    $stmt->close();
+}
+
+$conn->close();
+
+// Selalu redirect kembali ke dashboard setelah list selesai
+header("Location: dashboard.php");
+exit();
 ?>
-
-<div class="container mt-4">
-    <h3 class="mb-4">Daftar Reservasi Pelanggan</h3>
-
-    <table class="table table-bordered table-striped text-center">
-        <thead class="table-dark">
-            <tr>
-                <th>No</th>
-                <th>Nama User</th>
-                <th>Nomor Meja</th>
-                <th>Tanggal</th>
-                <th>Waktu</th>
-                <th>Jumlah Orang</th>
-                <th>Status</th>
-                <th>Catatan</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php 
-            $no = 1;
-            while($row = mysqli_fetch_assoc($result)) { 
-            ?>
-            <tr>
-                <td><?= $no++; ?></td>
-                <td><?= htmlspecialchars($row['nama_user']); ?></td>
-                <td><?= htmlspecialchars($row['nomor_meja']); ?> (<?= $row['kapasitas']; ?> org)</td>
-                <td><?= $row['tanggal_reservasi']; ?></td>
-                <td><?= $row['waktu_reservasi']; ?></td>
-                <td><?= $row['jumlah_orang']; ?></td>
-                <td>
-                    <?php
-                        switch ($row['status']) {
-                            case 'pending': 
-                                echo "<span class='badge bg-warning text-dark'>Pending</span>"; break;
-                            case 'diterima': 
-                                echo "<span class='badge bg-success'>Diterima</span>"; break;
-                            case 'ditolak': 
-                                echo "<span class='badge bg-danger'>Ditolak</span>"; break;
-                            case 'selesai': 
-                                echo "<span class='badge bg-secondary'>Selesai</span>"; break;
-                        }
-                    ?>
-                </td>
-                <td><?= $row['catatan'] ?: '-'; ?></td>
-            </tr>
-            <?php } ?>
-        </tbody>
-    </table>
-</div>
-
-<?php include '../../template/footer.php'; ?>

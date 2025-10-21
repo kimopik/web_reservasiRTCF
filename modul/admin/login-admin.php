@@ -1,127 +1,95 @@
 <?php
+// File: modul/admin/login-admin.php
+
 session_start();
-// Pastikan path ke koneksi.php sudah benar sesuai struktur Anda
-require '../../lib/koneksi.php'; 
+// Include koneksi DB
+include_once '../../lib/koneksi.php'; 
 
-$error = ''; // Variabel untuk menyimpan pesan error
+$error = '';
 
-// Cek jika pengguna sudah login, langsung redirect ke dashboard
-if (isset($_SESSION['admin_username'])) {
-    header("Location: dashboard.php");
-    exit();
-}
-
-// Logic untuk memproses form submit
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    
-    // 1. Ambil dan sanitasi input dari form
-    $username = trim($_POST['username']);
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $username = $_POST['username'];
     $password = $_POST['password'];
+
+    // Query untuk mencari admin berdasarkan username
+    $stmt = $conn->prepare("SELECT id, username, password, nama_lengkap FROM admins WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
     
-    // 2. Query untuk mengambil data admin berdasarkan username (menggunakan Prepared Statement)
-    // Asumsi: Tabel admin memiliki kolom 'username', 'password' (hash), dan 'nama_lengkap'
-    $sql = "SELECT username, password, nama_lengkap FROM admins WHERE username = ?";
-    
-    // Perhatikan: $koneksi adalah variabel koneksi yang didefinisikan di koneksi.php
-    if ($stmt = $koneksi->prepare($sql)) {
+    if ($result->num_rows === 1) {
+        $admin = $result->fetch_assoc();
         
-        // Bind parameter
-        $stmt->bind_param("s", $username); 
         
-        // Eksekusi statement
-        if ($stmt->execute()) {
-            
-            $result = $stmt->get_result();
-            
-            // Cek apakah username ditemukan
-            if ($result->num_rows == 1) {
-                $admin = $result->fetch_assoc();
-                
-                // 3. Verifikasi Password dengan HASH (Wajib untuk keamanan)
-                if (password_verify($password, $admin['password'])) {
-                    
-                    // 4. Login Berhasil - Set Sesi
-                    $_SESSION['admin_username'] = $admin['username'];
-                    $_SESSION['admin_nama_lengkap'] = $admin['nama_lengkap'];
-                    
-                    // 5. Redirect ke Dashboard
-                    header("Location: dashboard.php");
-                    exit(); // Penting: Hentikan script setelah header()
-                } else {
-                    // Password salah
-                    $error = "Username atau password salah."; 
-                }
-            } else {
-                // Username tidak ditemukan
-                $error = "Username atau password salah.";
-            }
+       if ($password === $admin['password']) { 
+            // Login Berhasil
+            $_SESSION['admin_logged_in'] = true;
+            $_SESSION['admin_id'] = $admin['id'];
+            $_SESSION['admin_username'] = $admin['username'];
+            $_SESSION['admin_nama'] = $admin['nama_lengkap'];
+
+            // Redirect ke halaman dashboard
+            header("Location: dashboard.php");
+            exit();
         } else {
-            // Error saat eksekusi query
-            $error = "Terjadi kesalahan sistem saat login.";
+            $error = "Username atau password salah.";
         }
-        
-        $stmt->close();
     } else {
-        // Error saat prepared statement
-        $error = "Terjadi kesalahan sistem (Prepared Statement).";
+        $error = "Username tidak ditemukan.";
     }
+    $stmt->close();
 }
+// Tutup koneksi setelah selesai
+
 ?>
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Halaman Login Admin</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Admin Login</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* CSS untuk memposisikan kotak login di tengah */
-        body {
-            background-color: #f8f9fa; 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-        .login-container {
-            width: 100%;
-            max-width: 400px; 
-            padding: 15px;
-        }
+        body { background-color: #121212; color: #E0E0E0; }
+        .card { background-color: #1E1E1E; border: 1px solid #FFD700; }
+        .card-header { background-color: #2D2D2D; color: #FFD700; border-bottom: 1px solid #FFD700; }
+        .form-control { background-color: #2D2D2D; color: #E0E0E0; border: 1px solid #3A3A3A; }
+        .form-control:focus { background-color: #2D2D2D; color: #E0E0E0; border-color: #FFD700; box-shadow: 0 0 0 0.25rem rgba(255, 215, 0, 0.25); }
+        .btn-primary { background-color: #FFD700; border-color: #FFD700; color: #121212; font-weight: bold; }
+        .btn-primary:hover { background-color: #E0B500; border-color: #E0B500; }
     </style>
 </head>
-<body>
+<body class="d-flex align-items-center justify-content-center vh-100">
 
-    <div class="login-container">
-        <div class="card shadow-lg p-4">
-            <h3 class="card-title text-center mb-4">Login Admin</h3>
-            
-            <?php if (!empty($error)): ?>
-                <div class="alert alert-danger" role="alert">
-                    <?php echo $error; ?>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-5">
+            <div class="card shadow-lg border-0 rounded-lg mt-5">
+                <div class="card-header"><h3 class="text-center font-weight-light my-4">Konsol Administrasi RTCF</h3></div>
+                <div class="card-body">
+                    <?php if ($error): ?>
+                        <div class="alert alert-danger" role="alert"><?php echo $error; ?></div>
+                    <?php endif; ?>
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input class="form-control" id="username" name="username" type="text" required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input class="form-control" id="password" name="password" type="password" required />
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between mt-4 mb-0">
+                            <button class="btn btn-primary w-100" type="submit">Login</button>
+                        </div>
+                    </form>
                 </div>
-            <?php endif; ?>
-
-            <form action="login-admin.php" method="POST">
-                
-                <div class="mb-3">
-                    <label for="username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="username" name="username" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
-                </div>
-                
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary">Login</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
